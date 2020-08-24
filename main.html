@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Manager</title>
+</head>
+<body>
+
+<div align="center">
+    <p>Hello {% if user %}{{ user.email().upper().split('@')[0] }}{% else %}GUEST{% endif %}! Welcome to the Task
+        Manager<br/>
+        <a href='{{ url }}'>{{ url_string }}</a>
+    </p>
+</div>
+<hr/>
+{% if user %}
+<div align="center">
+    <h3>Create A New Taskboard</h3>
+    <form action="/new-board" method="post">
+        <label>
+            Name:
+            {% if new_taskboard_name == None %}
+            {% set new_taskboard_name = '' %}
+            {% endif %}
+            <input type="text" name="new_taskboard_name" value="{{ new_taskboard_name }}" required="required"
+                   placeholder="New Task-Board Name"/>
+        </label>
+        <input type="submit" value="Create">
+    </form>
+    <p id="new_taskboard_error" style="display: none;">
+        <span style="color: red; ">Error! Duplicate name. Please choose another name and try again.</span>
+    </p>
+    <p id="new_taskboard_success" style="display: none;">
+        <span style="color: green; ">Task-Board created successfully!</span>
+    </p>
+
+</div>
+<table cellpadding="5px">
+    <tr>
+        <th>
+            Sl.
+        </th>
+        <th>
+            Taskboard
+        </th>
+        <th>
+
+        </th>
+    </tr>
+    {% for key in member.taskboards %}
+    <tr>
+        <td>
+            {{ loop.index }}
+        </td>
+        <td>
+            <a href="/taskboard?id={{ key.urlsafe() }}"> {{ key.id() }}</a><br/>
+        </td>
+        <td>
+            {% if member.key==key.get().members[0] %}
+            OWNER
+            {% endif %}
+        </td>
+        <td>
+            {% if key.get().members|length == 1 and not key.get().tasks %}
+            <form action="/delete-board" method="post">
+                <input type="hidden" name="delete_taskboard_id" value="{{ key.urlsafe() }}">
+                <input type="submit" value="Delete">
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+
+    {% endfor %}
+    {% endif %}
+</table>
+
+
+{% if report %}
+{% if report == 1 %}
+<script type="text/javascript">
+    document.getElementsByName('new_taskboard_name')[0].onblur = function () {
+        document.getElementById("new_taskboard_success").style = "display: none;"
+    };
+    document.getElementById("new_taskboard_success").style = "display: unset;"
+</script>
+{% endif %}
+{% if report == -1 %}
+<script type="text/javascript">
+    document.getElementsByName('new_taskboard_name')[0].style = "box-shadow: 0 0 5px red;border: 1px solid red;";
+    document.getElementsByName('new_taskboard_name')[0].onblur = function () {
+        this.style = "";
+        document.getElementById("new_taskboard_error").style = "display: none;"
+    };
+    document.getElementById("new_taskboard_error").style = "display: unset;"
+</script>
+{% endif %}
+{% endif %}
+
+
+</body>
+</html>

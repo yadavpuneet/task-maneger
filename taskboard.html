@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Manager</title>
+</head>
+<body>
+
+<div align="center">
+    <p>Hello {% if user %}{{ user.email().upper().split('@')[0] }}{% else %}GUEST{% endif %}! Welcome to the Task
+        Manager<br/>
+        <a href='/'>home</a>
+        <a href='{{ url }}'>{{ url_string }}</a>
+    </p>
+</div>
+<hr/>
+{% if taskboard %}
+
+{% set stats = count_tasks(taskboard) %}
+
+<div align="center">
+
+    <form action="/rename-board" method="post">
+        <label>
+            Taskboard: <a href="/taskboard?id={{ taskboard.key.urlsafe() }}"> {{ taskboard.key.id() }}</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="text" name="rename_taskboard_name" value="{{ rename_taskboard_name }}"
+                   required="required" placeholder="New Name" {% if member.key!=taskboard.members[0] %}
+                   style="display: none" {% endif %}>
+        </label>
+        <input type="hidden" name="rename_taskboard_id" value="{{ taskboard.key.urlsafe() }}">
+        <input type="submit" value="Rename" {% if member.key!=taskboard.members[0] %} style="display: none" {% endif %}>
+    </form>
+    <p id="rename_taskboard_error" style="display: none;">
+        <span style="color: red; ">Error! Duplicate name. Please choose another name and try again.</span>
+    </p>
+    <p id="rename_taskboard_success" style="display: none;">
+        <span style="color: green; ">Task-Board renamed successfully!</span>
+    </p>
+
+    <h3>Taskboard Stats</h3>
+    <table cellpadding="5px" style="text-align: center">
+        <tr>
+            <th>Total Tasks</th>
+            <th>Active</th>
+            <th>Completed</th>
+            <th>Completed Today</th>
+        </tr>
+        <tr>
+            <td>{{ stats[0] }}</td>
+            <td>{{ stats[1] }}</td>
+            <td>{{ stats[2] }}</td>
+            <td>{{ stats[3] }}</td>
+        </tr>
+    </table>
+
+</div>
+
+<table width="100%">
+    <tr valign="top">
+        <td width="70%">
+            <h3>Tasks</h3>
+            <form action="/add-task" method="post">
+                <label>
+                    New Task:
+                    <input type="text" name="add_task_name" value="{{ add_task_name }}"
+                           required="required" placeholder="Task Name">
+                </label>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <label>
+                    Deadline:
+                    <input type="date" name="add_task_date" value="{{ add_task_date }}"
+                           required="required" placeholder="Due Date">
+                </label>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <input type="hidden" name="add_task_taskboard" value="{{ taskboard.key.urlsafe() }}">
+                <input type="submit" value="Add">
+            </form>
+            <p id="add_task_error" style="display: none;">
+                <span style="color: red; ">Error! Duplicate Task Name. Please choose another name.</span>
+            </p>
+            <p id="add_task_success" style="display: none;">
+                <span style="color: green; ">Task Added successfully!</span>
+            </p>
+            <table cellpadding="5px">
+                <tr>
+                    <th>
+                        Sl.
+                    </th>
+                    <th>
+                        Name
+                    </th>
+                    <th>
+                        Deadline
+                    </th>
+                    <th>
+                        Assigned To
+                    </th>
+                    <th>
+                        Completed
+                    </th>
+                    <th>
+                        Delete
+                    </th>
+                </tr>
+                {% for key in taskboard.tasks %}
+                <tr>
+                    <td>
+                        {{ loop.index}}
+                    </td>
+                    <td>
+                        {{ key.id() }}
+                    </td>
+                    <td>
+
+                        <form action="/deadline-task" method="post">
+                            <input type="date" name="deadline_task_date" value="{{ key.get().deadline }}"
+                                   onchange="if(this.value.length>0)this.form.submit()">
+                            <input type="hidden" name="deadline_task_taskboard" value="{{ taskboard.key.urlsafe() }}">
+                            <input type="hidden" name="deadline_task_id" value="{{ key.urlsafe() }}">
+                        </form>
+                    </td>
+                    <td {% if key.get().assigned_to==None %} style="background: red" {% else %}
+                        style="background: greenyellow" {% endif %}>
+                        <form action="/assign-task" method="post">
+                            <select name="assign_task_member" onchange="this.form.submit()">
+                                <option value="">Not Assigned</option>
+                                {% for k in taskboard.members %}
+                                <option value="{{ k.urlsafe() }}"
+                                        {% if k== key.get().assigned_to %} selected="selected" {% endif %}>{{ k.id() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="hidden" name="assign_task_taskboard" value="{{ taskboard.key.urlsafe() }}">
+                            <input type="hidden" name="assign_task_id" value="{{ key.urlsafe() }}">
+                        </form>
+                    </td>
+                    <td>
+                        <form action="/complete-task" method="post">
+                            <label>
+                                <input type="checkbox" name="complete_task_state" {% if key.get().is_completed %}
+                                       checked="checked" {% endif %} onchange="this.form.submit()">
+                                {% if key.get().completed_on %}
+                                {{ key.get().completed_on.strftime('%Y-%m-%d %H:%M') }}
+                                {% endif %}
+                            </label>
+                            <input type="hidden" name="complete_task_taskboard" value="{{ taskboard.key.urlsafe() }}">
+                            <input type="hidden" name="complete_task_id" value="{{ key.urlsafe() }}">
+                        </form>
+                    </td>
+                    <td>
+                        <form action="/delete-task" method="post">
+                            <input type="hidden" name="delete_task_taskboard" value="{{ taskboard.key.urlsafe() }}">
+                            <input type="hidden" name="delete_task_id" value="{{ key.urlsafe() }}">
+                            <input type="submit" value="Delete">
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </td>
+        <td width="30%">
+            <h3>Members</h3>
+            {% if member.key==taskboard.members[0] %}
+            <form action="/invite-member" method="post">
+                <label>
+                    New Member:
+                    <input type="text" name="invite_member_email" value="{{ invite_member_email }}"
+                           required="required" placeholder="Member's Email">
+                </label>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <input type="hidden" name="invite_member_taskboard" value="{{ taskboard.key.urlsafe() }}">
+                <input type="submit" value="Invite">
+            </form>
+            <p id="invite_member_error" style="display: none;">
+                <span style="color: red; ">Error! The email-id does not exist.</span>
+            </p>
+            <p id="invite_member_success" style="display: none;">
+                <span style="color: green; ">Member Added successfully!</span>
+            </p>
+            <p id="invite_member_exists" style="display: none;">
+                <span style="color: green; ">Already a member!</span>
+            </p>
+            {% endif %}
+            <table cellpadding="5px">
+                <tr>
+                    <th>
+                        Sl.
+                    </th>
+                    <th>
+                        Email
+                    </th>
+                    <th>
+
+                    </th>
+                </tr>
+                {% for key in taskboard.members %}
+                <tr>
+                    <td>
+                        {{ loop.index }}
+                    </td>
+                    <td>
+                        {{ key.id() }}
+                    </td>
+                    <td>
+                        {% if key==taskboard.members[0] %}
+                        OWNER
+                        {% elif member.key==taskboard.members[0] %}
+                        <form action="/remove-member" method="post">
+                            <input type="hidden" name="remove_member_taskboard" value="{{ taskboard.key.urlsafe() }}">
+                            <input type="hidden" name="remove_member_id" value="{{ key.urlsafe() }}">
+                            <input type="submit" value="Remove">
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </td>
+    </tr>
+</table>
+
+
+{% else %}
+<p>
+    <span style="color: red; ">Error! You are not authorized to view this page.</span>
+    <a href="/">home</a>
+</p>
+{% endif %}
+
+
+{% if report %}
+{% if report == 3 %}
+<script type="text/javascript">
+    document.getElementsByName('invite_member_email')[0].onblur = function () {
+        document.getElementById("invite_member_success").style = "display: none;"
+    };
+    document.getElementById("invite_member_success").style = "display: unset;"
+</script>
+{% endif %}
+{% if report == -2 %}
+<script type="text/javascript">
+    document.getElementsByName('invite_member_email')[0].style = "box-shadow: 0 0 5px red;border: 1px solid red;";
+    document.getElementsByName('invite_member_email')[0].onblur = function () {
+        this.style = "";
+        document.getElementById("invite_member_error").style = "display: none;"
+    };
+    document.getElementById("invite_member_error").style = "display: unset;"
+</script>
+{% endif %}
+{% if report == -3 %}
+<script type="text/javascript">
+    document.getElementsByName('invite_member_email')[0].style = "box-shadow: 0 0 5px red;border: 1px solid red;";
+    document.getElementsByName('invite_member_email')[0].onblur = function () {
+        this.style = "";
+        document.getElementById("invite_member_exists").style = "display: none;"
+    };
+    document.getElementById("invite_member_exists").style = "display: unset;"
+</script>
+{% endif %}
+{% if report == 4 %}
+<script type="text/javascript">
+    document.getElementsByName('add_task_name')[0].onblur = function () {
+        document.getElementById("add_task_name").style = "display: none;"
+    };
+    document.getElementById("add_task_success").style = "display: unset;"
+</script>
+{% endif %}
+{% if report == -4 %}
+<script type="text/javascript">
+    document.getElementsByName('add_task_name')[0].style = "box-shadow: 0 0 5px red;border: 1px solid red;";
+    document.getElementsByName('add_task_name')[0].onblur = function () {
+        this.style = "";
+        document.getElementById("add_task_error").style = "display: none;"
+    };
+    document.getElementById("add_task_error").style = "display: unset;"
+</script>
+{% endif %}
+{% if report == 5 %}
+<script type="text/javascript">
+    document.getElementsByName('rename_taskboard_name')[0].onblur = function () {
+        document.getElementById("rename_taskboard_name").style = "display: none;"
+    };
+    document.getElementById("rename_taskboard_success").style = "display: unset;"
+</script>
+{% endif %}
+{% if report == -5 %}
+<script type="text/javascript">
+    document.getElementsByName('rename_taskboard_name')[0].style = "box-shadow: 0 0 5px red;border: 1px solid red;";
+    document.getElementsByName('rename_taskboard_name')[0].onblur = function () {
+        this.style = "";
+        document.getElementById("rename_taskboard_error").style = "display: none;"
+    };
+    document.getElementById("rename_taskboard_error").style = "display: unset;"
+</script>
+{% endif %}
+{% endif %}
+
+</body>
+</html>
