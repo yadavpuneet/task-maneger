@@ -96,3 +96,4 @@ NDB model is also used to describe the definition of class declared straightforw
 17.	At last home and logout buttons placed with one another and clearly visible to the user.
 
 
+Liscence ©yadavpuneet
