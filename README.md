@@ -3,9 +3,11 @@
 Overview
 
 This is a task management system which helps in creating and monitoring of different tasks assigning to multiple users. Admin of the application can create a task board that contains number of task and their respective deadlines, he can also invite different users to see and interact on the created boards.
+
 1	INTRODUCTION
 1.1	Purpose and Scope
 The purpose of this application is to create an application model that describes the created task boards in the form of different tasks and users.
+
 1.2	Project Requirements
 1.	Python 2.7
 2.	Google app engine
